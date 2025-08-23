@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Power Roll Spinner — Ink Game</title>
+  <style>
+    :root{ --bg:#0b0f1a; --text:#e8eaf2; --muted:#9aa3b2; --accent:#7c3aed; }
+    *{box-sizing:border-box}
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 800px at 70% -20%, #1a2140 0%, #0e1426 45%, var(--bg) 100%);
+      color:var(--text); min-height:100vh; display:grid; place-items:center; padding:24px;}
+    .wrap{display:grid; gap:18px; width:min(100%,1150px); position:relative;}
+    .headline h1{margin:0 0 6px; font-weight:800}
+    .headline p{margin:0; color:var(--muted)}
+    .credit{position:absolute; top:10px; right:14px; font-size:16px; color:var(--muted); font-weight:900;}
+    .card{ background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.02); }
+    .grid{display:grid; grid-template-columns: 430px 1fr; gap:18px;}
+    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+    .wheel-wrap{position:relative; display:grid; place-items:center; padding:10px}
+    canvas{display:block}
+    .pointer{position:absolute; top:8px; left:50%; transform:translateX(-50%);
+      width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;
+      border-bottom:26px solid #fff; filter:drop-shadow(0 2px 5px rgba(0,0,0,.6));}
+    .controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px}
+    button{background:var(--accent); color:#fff; border:none; border-radius:12px; padding:10px 14px;
+      font-weight:700; cursor:pointer; letter-spacing:.2px; transition:transform .06s ease}
+    button.secondary{background:#2b334a}
+    button:active{transform:translateY(1px)}
+    button[disabled]{opacity:.6; cursor:not-allowed}
+    .result{font-size:18px; margin-top:8px; font-weight:800}
+    .mini{font-size:12px} .muted{color:var(--muted)} .right{text-align:right}
+    .items{display:grid; grid-template-columns:1fr; gap:10px}
+    .item-row{display:grid; grid-template-columns: 130px 1fr 120px 80px; gap:10px; align-items:center}
+    .badge{padding:.15rem .5rem; border-radius:999px; font-weight:800; font-size:12px; display:inline-block}
+    .COMMON{background:#3b82f620; color:#a8c5ff}
+    .RARE{background:#22c55e20; color:#9ff0b8}
+    .EPIC{background:#8b5cf620; color:#ccb6ff}
+    .LEGENDARY{background:#f59e0b20; color:#ffd99e}
+    .MYTHIC{background:#ef444420; color:#ffb3b3}
+    .label{position:absolute; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.18);
+      padding:2px 6px; border-radius:8px; font-weight:800; font-size:12px; white-space:nowrap; pointer-events:none}
+    .log{max-height:160px; overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px}
+    .log div{font-size:13px; line-height:1.5}
+    .boosts{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .boosts .btn{background:#2b334a; border-radius:999px; padding:6px 10px; cursor:pointer; user-select:none}
+    .boosts .btn.active{background:var(--accent);}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="credit">Developed by Alexasm</div>
+  <div class="headline">
+    <h1>Loot Spinner — Method 2 + Luck Boosts (v4)</h1>
+    <p>Boost multiplies all <strong>non-Common</strong> rates, then renormalizes to 100%.</p>
+  </div>
+
+  <!-- Boost controls -->
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div class="boosts">
+      <span class="muted mini" style="margin-right:6px">Luck boost:</span>
+      <span class="btn" data-boost="0">0%</span>
+      <span class="btn" data-boost="25">+25%</span>
+      <span class="btn" data-boost="50">+50%</span>
+      <span class="btn" data-boost="75">+75%</span>
+      <span class="btn active" data-boost="100">+100%</span>
+    </div>
+    <div class="mini muted">Current: <strong id="boostLabel">+100%</strong> • Mythic (any) = <strong id="mythicAny">—</strong></div>
+  </div>
+
+  <div class="card grid">
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="400" height="400"></canvas>
+      <div id="labels"></div>
+      <div class="controls">
+        <button id="spin1">Spin</button>
+        <button id="spin10"  class="secondary">Spin × 10</button>
+        <button id="spin50"  class="secondary">Spin × 50</button>
+        <button id="spin100" class="secondary">Spin × 100</button>
+        <button id="spin1000" class="secondary">Spin × 1000</button>
+        <button id="reset" class="secondary">Reset</button>
+      </div>
+      <div class="result" id="resultText">Result: —</div>
+      <div class="mini muted">Total spins: <strong id="totalSpins">0</strong></div>
+    </div>
+
+    <div>
+      <div class="items card" style="background:transparent;border:none;box-shadow:none;padding:0">
+        <div class="item-row" style="font-weight:700;color:var(--muted)">
+          <div>Rarity</div><div>Item</div><div class="right">Per-item %</div><div class="right">Wins</div>
+        </div>
+        <div id="itemsList"></div>
+      </div>
+
+      <div class="card mini" style="margin-top:12px">
+        <div style="font-weight:800;margin-bottom:6px">Last 10 results</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+
+  const idFor = (name) => 'w_' + name.replace(/\\s+/g,'_').replace(/[^a-zA-Z0-9_\\-:]/g, '');
+
+  const base = [
+    { key:"COMMON",    chance:72.0, color:"#4f46e5", items:["MEDIC","PLAYER 120"] },
+    { key:"RARE",      chance:17.0, color:"#22c55e", items:["TRICKSTER","PARKOUR ARTIST"] },
+    { key:"EPIC",      chance:8.0,  color:"#8b5cf6", items:["SUPER STRENGTH","BLACKFLASH"] },
+    { key:"LEGENDARY", chance:2.9,  color:"#f59e0b", items:["PHANTOM STEP","WEAPON SMUGGLER","HERCULES"] },
+    { key:"MYTHIC",    chance:0.1,  color:"#ef4444", items:["QUICKSILVER","TIME STOP","LIGHTNING GOD","THE DOCTOR"] },
+  ];
+
+  let boostPct = 100;
+  let rarities = [];
+  let weights = [];
+  const itemsList = document.getElementById('itemsList');
+  const mythicAnyEl = document.getElementById('mythicAny');
+  const boostLabel = document.getElementById('boostLabel');
+  const resultText = document.getElementById('resultText');
+  const totalSpinsEl = document.getElementById('totalSpins');
+  const logEl = document.getElementById('log');
+  const itemWinCounts = {};
+  const itemWinsEl = {};
+  let lastResults = [];
+  let totalSpins = 0;
+
+  function recalc(){
+    const factor = 1 + (boostPct/100);
+    let adjusted = base.map(r => (r.key==="COMMON" ? r.chance : r.chance*factor));
+    const sum = adjusted.reduce((a,b)=>a+b,0);
+    const normalized = adjusted.map(x => x * 100 / sum);
+
+    rarities = base.map((r,i)=>({ key:r.key, color:r.color, items:[...r.items], chance: normalized[i] }));
+    rarities.forEach(r => r.itemChance = r.chance / r.items.length);
+
+    weights = rarities.map(r => Math.round(r.chance/100*1000));
+    let diff = 1000 - weights.reduce((a,b)=>a+b,0);
+    if (diff !== 0){ const i = weights.indexOf(Math.max(...weights)); weights[i] += diff; }
+
+    boostLabel.textContent = `+${boostPct}%`;
+    const mythic = rarities.find(r=>r.key==="MYTHIC");
+    mythicAnyEl.textContent = mythic ? mythic.chance.toFixed(3) + "%" : "—";
+
+    renderList(); drawWheel(currentRotation); ranges = rarityRanges();
+  }
+
+  function renderList(){
+    itemsList.innerHTML = "";
+    rarities.forEach(r => {
+      r.items.forEach(it => {
+        const id = idFor(it);
+        if (itemWinCounts[it] == null) itemWinCounts[it] = 0;
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div><span class="badge ${r.key}">${r.key}</span></div>
+          <div class="tag">${it}</div>
+          <div class="right">${r.itemChance.toFixed(5)}%</div>
+          <div class="right" id="${id}">${itemWinCounts[it]}</div>`;
+        itemsList.appendChild(row);
+        itemWinsEl[it] = document.getElementById(id);
+      });
+    });
+  }
+
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const r = canvas.width/2; const center = {x:r,y:r};
+  const labelsRoot = document.getElementById('labels');
+  function clearLabels(){ labelsRoot.innerHTML = ""; }
+  function addLabel(text, angle){
+    const outer = r + 36; const x = center.x + outer * Math.sin(angle); const y = center.y - outer * Math.cos(angle);
+    const el = document.createElement('div'); el.className = 'label'; el.textContent = text;
+    el.style.left = (x - 50) + "px"; el.style.top = (y - 10) + "px"; labelsRoot.appendChild(el);
+  }
+  function drawWheel(rotation=0){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const totalW = weights.reduce((a,b)=>a+b,0);
+    ctx.save(); ctx.translate(center.x,center.y); ctx.rotate(rotation);
+    let acc = 0;
+    for (let i=0;i<rarities.length;i++){
+      const ang = (weights[i]/totalW) * Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r-6,acc,acc+ang); ctx.closePath();
+      ctx.fillStyle = rarities[i].color; ctx.globalAlpha = .92; ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 2; ctx.stroke();
+      acc += ang;
+    }
+    ctx.restore(); clearLabels();
+    let start = 0;
+    for (let i=0;i<rarities.length;i++){ const ang = (weights[i]/totalW)*Math.PI*2; const mid = start + ang/2; addLabel(`${rarities[i].key}`, mid+rotation); start += ang; }
+  }
+  let currentRotation = 0;
+
+  function rarityRanges(){
+    const totalW = weights.reduce((a,b)=>a+b,0);
+    let ranges = [], acc = 0;
+    for (let i=0;i<rarities.length;i++){ const ang = (weights[i]/totalW)*Math.PI*2; ranges.push([acc, acc+ang]); acc += ang; }
+    return ranges;
+  }
+  function pickRarityIndex(){
+    const total = weights.reduce((a,b)=>a+b,0);
+    let roll = Math.floor(Math.random()*total);
+    for (let i=0;i<weights.length;i++){ if (roll < weights[i]) return i; roll -= weights[i]; }
+    return weights.length-1;
+  }
+
+  const easeOutCubic = x => 1 - Math.pow(1 - x, 3);
+  let ranges = []; let spinning = false;
+
+  async function spinAnimatedOnce(){
+    if (spinning) return;
+    spinning = true;
+    try{
+      const rIndex = pickRarityIndex();
+      const rarity = rarities[rIndex];
+      const chosenItem = rarity.items[Math.floor(Math.random()*rarity.items.length)];
+      const [a0,a1] = ranges[rIndex]; const mid = a0 + (a1-a0)/2;
+      const extraSpins = 4 + Math.floor(Math.random()*2);
+      const startRot = currentRotation;
+      const targetRot = startRot + extraSpins*2*Math.PI + (2*Math.PI - (mid % (2*Math.PI)));
+      const duration = 2000; const start = performance.now();
+      await new Promise(resolve => {
+        const tick = (now)=>{ const t = Math.min(1,(now-start)/duration); const eased = easeOutCubic(t);
+          currentRotation = startRot + (targetRot-startRot)*eased; drawWheel(currentRotation);
+          if (t<1) requestAnimationFrame(tick); else resolve(); };
+        requestAnimationFrame(tick);
+      });
+      itemWinCounts[chosenItem] = (itemWinCounts[chosenItem]||0)+1;
+      totalSpins++; totalSpinsEl.textContent = totalSpins;
+      const text = `🎯 ${rarity.key} → ${chosenItem}`;
+      resultText.innerHTML = "Result: <strong>"+text+"</strong>";
+      lastResults.unshift(text); if (lastResults.length>10) lastResults.pop();
+      logEl.innerHTML = lastResults.map(s=>`<div>${s}</div>`).join("");
+    } finally { spinning = false; }
+  }
+
+  function spinMany(n){
+    for (let i=0;i<n;i++){ const rIndex = pickRarityIndex(); const rarity = rarities[rIndex];
+      const chosenItem = rarity.items[Math.floor(Math.random()*rarity.items.length)];
+      itemWinCounts[chosenItem] = (itemWinCounts[chosenItem]||0)+1; totalSpins++; }
+    totalSpinsEl.textContent = totalSpins; resultText.textContent = `Simulated ${n} spins.`; drawWheel(currentRotation+0.1);
+  }
+
+  function resetAll(){
+    Object.keys(itemWinCounts).forEach(k=>itemWinCounts[k]=0); totalSpins=0; totalSpinsEl.textContent="0"; resultText.textContent="Result: —"; lastResults=[]; logEl.innerHTML=""; currentRotation=0; drawWheel(0);
+  }
+
+  // Boost buttons
+  document.querySelectorAll('.boosts .btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.boosts .btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      boostPct = parseInt(btn.dataset.boost,10);
+      recalc();
+    });
+  });
+
+  document.getElementById('spin1').addEventListener('click', spinAnimatedOnce);
+  document.getElementById('spin10').addEventListener('click', ()=>spinMany(10));
+  document.getElementById('spin50').addEventListener('click', ()=>spinMany(50));
+  document.getElementById('spin100').addEventListener('click', ()=>spinMany(100));
+  document.getElementById('spin1000').addEventListener('click', ()=>spinMany(1000));
+  document.getElementById('reset').addEventListener('click', resetAll);
+
+  recalc();
+})();
+</script>
+</body>
+</html>
