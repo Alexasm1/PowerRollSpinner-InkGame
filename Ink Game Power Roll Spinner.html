@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ink Game Power Roll Spinner</title>
+<style>
+  :root{ --bg:#0b0f1a; --muted:#9aa3b2; --text:#e8eaf2; --accent:#7c3aed;
+         --cardw:150px; --g:10px; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif;
+       background:radial-gradient(1200px 800px at 70% -20%, #1a2140 0%, #0e1426 45%, var(--bg) 100%);
+       color:var(--text);min-height:100vh;padding:18px;display:grid;place-items:center}
+  .wrap{width:min(1150px,100%);display:grid;gap:10px;position:relative}
+  .credit{position:absolute;top:6px;right:8px;color:var(--muted);font-weight:900}
+  h1{margin:.1rem 0 0;font-weight:900;font-size:28px}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px}
+  .btn{background:#2b334a;color:#fff;border:none;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:13px}
+  .btn.acc{background:var(--accent)}
+  .mini{font-size:12px;color:var(--muted)}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+         border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:8px}
+
+  /* Reel */
+  .reel-wrap{position:relative;height:180px;overflow:hidden;border-radius:12px;background:#0d1230;border:1px solid rgba(255,255,255,.12)}
+  .pointer{position:absolute;top:6px;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:24px solid #fff;filter:drop-shadow(0 2px 5px rgba(0,0,0,.6));z-index:2}
+  .reel{display:flex;gap:var(--g);align-items:center;height:100%;padding:0;transform:translateX(0);will-change:transform}
+  .card{flex:0 0 var(--cardw);height:130px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;align-items:center;
+        border:2px solid rgba(255,255,255,.85);box-shadow:0 10px 22px rgba(0,0,0,.45);text-align:center;padding:6px}
+  .rar{font-weight:900;font-size:11px;letter-spacing:.35px;text-transform:uppercase}
+  .title{font-weight:900;margin-top:4px;font-size:14px;line-height:1.1}
+  .chance{margin-top:4px;font-weight:800;opacity:.95;font-size:12px}
+  /* Colors */
+  .COMMON{background:linear-gradient(180deg,#10b981,#065f46);color:#eafff6;border-color:#34d399}
+  .RARE{background:linear-gradient(180deg,#fbbf24,#854d0e);color:#fffbea;border-color:#fde047}
+  .EPIC{background:linear-gradient(180deg,#3b82f6,#1e3a8a);color:#eef2ff;border-color:#60a5fa}
+  .LEGENDARY{background:linear-gradient(180deg,#8b5cf6,#4c1d95);color:#f5f3ff;border-color:#a78bfa}
+  .MYTHIC{
+    background:conic-gradient(from 90deg,#10b981 0 20%,#facc15 20% 40%,#60a5fa 40% 60%,#a78bfa 60% 80%,#ef4444 80% 100%);
+    color:#ffffff;border-color:#ffffff;
+  }
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .result{font-size:16px;font-weight:900;margin-top:8px}
+
+  /* Table BELOW reel (compact) */
+  .table-panel{margin-top:14px}
+  .status{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .rows{max-height:300px;overflow:auto;padding-right: 20px;border-top:1px dashed rgba(255,255,255,.12)}
+  .row{display:grid;grid-template-columns:95px 1fr 90px 52px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.12);font-size:12px}
+  .row.h{color:var(--muted);font-weight:800;border-bottom:1px dashed rgba(255,255,255,.15);position:sticky;top:0;background:rgba(2,6,23,.5);backdrop-filter:blur(2px)}
+  .badge{padding:.12rem .45rem;border-radius:999px;font-weight:800;font-size:10px;display:inline-block;border:1px solid rgba(255,255,255,.2)}
+  .bCOMMON{background:#065f4620;color:#86efac}.bRARE{background:#facc1520;color:#fde68a}.bEPIC{background:#3b82f620;color:#93c5fd}.bLEGENDARY{background:#a855f720;color:#e9d5ff}.bMYTHIC{background:#ffffff35;color:#ffffff}
+  .mythicName{background:linear-gradient(90deg,#22c55e,#facc15,#60a5fa,#a78bfa,#ef4444);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="credit">Made by Alexasm</div>
+  <h1>Ink Game Power Roll Spinner</h1>
+
+  <div class="bar">
+    <span class="mini">Luck:</span>
+    <button type="button" class="btn acc luck" data-boost="0">0%</button>
+    <button type="button" class="btn luck" data-boost="25">+25%</button>
+    <button type="button" class="btn luck" data-boost="50">+50%</button>
+    <button type="button" class="btn luck" data-boost="75">+75%</button>
+    <button type="button" class="btn luck" data-boost="100">+100%</button>
+    <button type="button" class="btn luck" data-boost="125">+125%</button>
+    <button type="button" class="btn luck" data-boost="150">+150%</button>
+    <button type="button" class="btn luck" data-boost="175">+175%</button>
+    <button type="button" class="btn luck" data-boost="200">+200%</button>
+    <button type="button" class="btn luck" data-boost="225">+225%</button>
+    <span class="mini" style="margin-left:auto">Current: <strong id="boostLabel">+0%</strong> • Mythic (any) = <strong id="mythicAny">—</strong></span>
+  </div>
+
+  <div class="panel">
+    <div class="reel-wrap" id="reelWrap">
+      <div class="pointer" id="ptr"></div>
+      <div class="reel" id="reel"></div>
+    </div>
+    <div class="controls">
+      <button type="button" id="spin" class="btn acc">Spin</button>
+      <button type="button" id="spin10" class="btn">Spin × 10</button>
+      <button type="button" id="spin50" class="btn">Spin × 50</button>
+      <button type="button" id="spin100" class="btn">Spin × 100</button>
+      <button type="button" id="spin1000" class="btn">Spin × 1000</button>
+      <button type="button" id="reset" class="btn">Reset</button>
+    </div>
+    <div class="result" id="result">Result: —</div>
+    <div class="mini">Total spins: <strong id="totalSpins">0</strong></div>
+
+    <!-- Moved table under the reel -->
+    <div class="table-panel">
+      <div class="status">Current: <strong id="boostMini">+0%</strong> • Mythic (any) = <strong id="mythicMini">—</strong></div>
+      <div class="row h"><div>Rarity</div><div>Item</div><div style="text-align:right">Per-item %</div><div style="text-align:right">Wins</div></div>
+      <div id="rows" class="rows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const base = [
+    { key:"COMMON",    chance:72.0, items:["MEDIC","PLAYER 120"] },
+    { key:"RARE",      chance:17.0, items:["TRICKSTER","PARKOUR ARTIST"] },
+    { key:"EPIC",      chance:8.0,  items:["SUPER STRENGTH","BLACKFLASH"] },
+    { key:"LEGENDARY", chance:2.9,  items:["PHANTOM STEP","WEAPON SMUGGLER","HERCULES"] },
+    { key:"MYTHIC",    chance:0.1,  items:["QUICKSILVER","TIME STOP","LIGHTNING GOD","THE DOCTOR"] },
+  ];
+
+  const VISIBLE = 7, MID=3, CARD_W=150, GAP=10, STEP=CARD_W+GAP, DECK_LEN=160;
+  const VISUAL_BIAS = { COMMON:1.25, RARE:1.15, EPIC:1.0, LEGENDARY:0.9, MYTHIC:0.08 };
+
+  let boostPct = 0, rarities=[], weights=[], wins={}, totalSpins=0, isSpinning=false;
+  const rows = document.getElementById('rows');
+  const totalSpinsEl = document.getElementById('totalSpins');
+  const resultEl = document.getElementById('result');
+  const boostLabel = document.getElementById('boostLabel');
+  const mythicAnyEl = document.getElementById('mythicAny');
+  const boostMini = document.getElementById('boostMini');
+  const mythicMini = document.getElementById('mythicMini');
+  const reel = document.getElementById('reel');
+  const wrap = document.getElementById('reelWrap');
+  const ptr = document.getElementById('ptr');
+
+  function placePointer(){
+    const children = reel.children;
+    if (!children[MID]) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    const cardRect = children[MID].getBoundingClientRect();
+    const center = cardRect.left + cardRect.width/2 - wrapRect.left;
+    ptr.style.left = center + "px";
+  }
+  window.addEventListener('resize', placePointer);
+
+  function renderRows(){
+    rows.innerHTML = "";
+    rarities.forEach(r=>{
+      r.items.forEach(it=>{
+        const id = "w_"+it.replace(/\\s+/g,'_');
+        if (wins[it]==null) wins[it]=0;
+        const itemHtml = r.key==="MYTHIC" ? '<span class="mythicName">'+it+'</span>' : it;
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = '<div><span class="badge b'+r.key+'">'+r.key+'</span></div>' +
+                        '<div>'+itemHtml+'</div>' +
+                        '<div style="text-align:right">'+r.itemChance.toFixed(5)+'%</div>' +
+                        '<div style="text-align:right" id="'+id+'">'+wins[it]+'</div>';
+        rows.appendChild(row);
+      });
+    });
+  }
+
+  function recalc(){
+    const commonBase = base.find(r=>r.key==="COMMON").chance;
+    const nonCommon = base.filter(r=>r.key!=="COMMON");
+    const totalNC = nonCommon.reduce((s,r)=>s+r.chance,0);
+    const factorReq = 1 + (boostPct/100);
+    const extraNeed = totalNC * (factorReq - 1);
+    const extraUsed = Math.min(Math.max(0, extraNeed), commonBase);
+    const eff = 1 + (extraUsed / totalNC);
+    const next = base.map(r=> r.key==="COMMON"
+      ? { key:r.key, items:r.items.slice(), chance: Math.max(0, commonBase - extraUsed) }
+      : { key:r.key, items:r.items.slice(), chance: r.chance * eff }
+    );
+    let sum = next.reduce((s,r)=>s+r.chance,0);
+    next.find(r=>r.key==="COMMON").chance += (100 - sum);
+    rarities = next;
+    rarities.forEach(r=> r.itemChance = r.chance / r.items.length);
+    weights = rarities.map(r=> Math.round(r.chance*1000));
+    boostLabel.textContent = '+'+boostPct+'%';
+    boostMini.textContent = '+'+boostPct+'%';
+    const mythic = rarities.find(r=>r.key==="MYTHIC");
+    const mythicPct = mythic ? mythic.chance.toFixed(3)+'%' : '—';
+    mythicAnyEl && (mythicAnyEl.textContent = mythicPct);
+    mythicMini.textContent = mythicPct;
+    buildDeck();     
+    buildWindow();
+    renderRows();
+  }
+
+  function pickRarityIndex(){
+    const total = weights.reduce((a,b)=>a+b,0);
+    let roll = Math.floor(Math.random()*total);
+    for (let i=0;i<weights.length;i++){ if (roll < weights[i]) return i; roll -= weights[i]; }
+    return weights.length-1;
+  }
+
+  let deck=[], head=0;
+  function buildDeck(){
+    const entries = [];
+    let counts = [];
+    rarities.forEach((r,ri)=>{
+      r.items.forEach((_,ii)=>{
+        const perItem = r.itemChance;
+        let c = (perItem/100) * DECK_LEN * (VISUAL_BIAS[r.key] || 1);
+        c = Math.max(1, Math.round(c));
+        counts.push({ri,ii,c,key:r.key});
+      });
+    });
+    function total(){ return counts.reduce((s,o)=>s+o.c,0); }
+    while (total() > DECK_LEN){
+      counts.sort((a,b)=>b.c-a.c);
+      for (let i=0;i<counts.length && total()>DECK_LEN;i++){ if (counts[i].c>1) counts[i].c--; }
+    }
+    while (total() < DECK_LEN){
+      counts.sort((a,b)=> (a.key==="MYTHIC") - (b.key==="MYTHIC") || b.c-a.c);
+      counts[0].c++;
+    }
+    counts.forEach(o=>{ for (let k=0;k<o.c;k++) entries.push({ri:o.ri, ii:o.ii}); });
+    for (let i=entries.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [entries[i], entries[j]] = [entries[j], entries[i]];
+    }
+    deck = entries;
+    head = 0;
+  }
+
+  function slotAt(offset){ return deck[(head + offset) % deck.length]; }
+
+  function buildCard(slot){
+    const rr = rarities[slot.ri];
+    const el = document.createElement('div');
+    el.className = 'card '+rr.key;
+    el.style.width = CARD_W+'px';
+    el.innerHTML = '<div class="rar">'+rr.key+'</div><div class="title">'+rr.items[slot.ii]+'</div><div class="chance">'+rr.itemChance.toFixed(5)+'%</div>';
+    return el;
+  }
+
+  function buildWindow(){
+    reel.innerHTML = "";
+    for (let i=0;i<VISIBLE;i++) reel.appendChild(buildCard(slotAt(i)));
+    reel.style.transition = 'none';
+    reel.style.transform = 'translateX(0px)';
+    wrap.style.width = (VISIBLE*STEP - GAP) + "px";
+    placePointer();
+  }
+
+  function animateSpin(totalSteps){
+    return new Promise(resolve=>{
+      reel.innerHTML = "";
+      for (let i=0;i<VISIBLE+totalSteps;i++) reel.appendChild(buildCard(slotAt(i)));
+      reel.style.transition = 'none';
+      reel.style.transform = 'translateX(0px)';
+      wrap.style.width = (VISIBLE*STEP - GAP) + "px";
+      placePointer();
+
+      const distance = - totalSteps * STEP;
+      requestAnimationFrame(()=>{
+        const DUR = 2000;
+        reel.style.transition = 'transform '+DUR+'ms cubic-bezier(.18,.85,.18,1)';
+        reel.style.transform = 'translateX('+distance+'px)';
+        const finish = ()=>{
+          reel.removeEventListener('transitionend', finish);
+          head = (head + totalSteps) % deck.length;
+          const last7 = Array.from(reel.children).slice(-VISIBLE).map(n=>n.cloneNode(true));
+          reel.innerHTML = "";
+          last7.forEach(n=>reel.appendChild(n));
+          reel.style.transition = 'none';
+          reel.style.transform = 'translateX(0px)';
+          placePointer();
+          resolve();
+        };
+        reel.addEventListener('transitionend', finish);
+        setTimeout(finish, DUR+120);
+      });
+    });
+  }
+
+  async function spinAnimated(){
+    if (isSpinning) return;
+    isSpinning = true;
+    try{
+      const ri = pickRarityIndex();
+      const rr = rarities[ri];
+      const ii = Math.floor(Math.random()*rr.items.length);
+      const chosenItem = rr.items[ii];
+
+      let stepsToAlign = 0;
+      while (true){
+        const s = deck[(head + MID + stepsToAlign) % deck.length];
+        if (s.ri===ri && s.ii===ii) break;
+        stepsToAlign++;
+        if (stepsToAlign > deck.length*2){ stepsToAlign = 0; break; }
+      }
+      const rounds = 1;
+      const totalSteps = stepsToAlign + rounds*deck.length;
+
+      await animateSpin(totalSteps);
+
+      wins[chosenItem] = (wins[chosenItem]||0)+1;
+      const id = "w_"+chosenItem.replace(/\\s+/g,'_');
+      const winEl = document.getElementById(id); if (winEl) winEl.textContent = wins[chosenItem];
+      totalSpins++; totalSpinsEl.textContent = totalSpins;
+      resultEl.innerHTML = 'Result: <strong>'+rr.key+' → '+chosenItem+'</strong>';
+    } finally { isSpinning = false; }
+  }
+
+  function spinMany(n){
+    for (let i=0;i<n;i++){
+      const ri = pickRarityIndex();
+      const rr = rarities[ri];
+      const item = rr.items[Math.floor(Math.random()*rr.items.length)];
+      wins[item] = (wins[item]||0)+1;
+      totalSpins++;
+    }
+    totalSpinsEl.textContent = totalSpins;
+    resultEl.textContent = 'Simulated '+n+' spins.';
+    rarities.forEach(r=>r.items.forEach(it=>{
+      const id = "w_"+it.replace(/\\s+/g,'_');
+      const winEl = document.getElementById(id); if (winEl) winEl.textContent = wins[it]||0;
+    }));
+  }
+
+  function resetAll(){
+    wins = {};
+    totalSpins = 0; totalSpinsEl.textContent = '0';
+    resultEl.textContent = 'Result: —';
+    buildDeck();
+    buildWindow();
+    renderRows();
+  }
+
+  document.querySelectorAll('.luck').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.luck').forEach(x=>x.classList.remove('acc'));
+      btn.classList.add('acc');
+      boostPct = parseInt(btn.dataset.boost,10);
+      recalc();
+    });
+  });
+
+  document.getElementById('spin').addEventListener('click', spinAnimated);
+  document.getElementById('spin10').addEventListener('click', ()=>spinMany(10));
+  document.getElementById('spin50').addEventListener('click', ()=>spinMany(50));
+  document.getElementById('spin100').addEventListener('click', ()=>spinMany(100));
+  document.getElementById('spin1000').addEventListener('click', ()=>spinMany(1000));
+  document.getElementById('reset').addEventListener('click', resetAll);
+
+  recalc();
+})();</script>
+</body>
+</html>
